@@ -25,4 +25,37 @@ attach(clean)
 m1 <- lm(PALL~p_wa+p_ba+p_h)
 summary(m1)
 
+# Comments about R
+Data Science with R
+
+R is a computer programming language
+
+Free Video from OReilly
+Introduction to Data Science with R
+How to Manipulate, Visualize, and Model Data with the R Language
+
+http://player.oreilly.com/videos/9781491911969?toc_id=192701
+
+Download R From:
+Select system
+http://cran.r-project.org/
+
+
+Download R studio
+http://www.rstudio.com/
+
+
+Resources:
+Quick-R
+http://www.statmethods.net/
+
+R is case sensitive
+
+R has data classes
+Four basic types
+- Numeric
+- Chracter
+- Logical
+- Factor
+
 detach(clean)
