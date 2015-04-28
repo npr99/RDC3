@@ -15,9 +15,12 @@ set more off       // Tell Stata to not pause for --more-- messages
 // What it is the root directory on your computer?
 * NOTE * Use forward slash (/) - Recognized by all OS
 * NOTE * MacOSX and Windows require different directory structures
-local rootdir = "C:/Users/Nathanael/Dropbox/MyProjects"           
+// change to project directory
+// example: cd c:/dropbox/myprojects/
+// Install utility to automate changing directories 'fastcd'
+// findit fastcd // to install
 
-cd "`rootdir'"                 // change to project directory
+
 * Stata can create folders if they do not exist
 capture mkdir RDC3             // Project directory
 cd RDC3
