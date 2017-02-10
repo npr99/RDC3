@@ -1,17 +1,49 @@
-capture log close master  // suppress error and close any open logs
-log using RDC3-master, name(master) replace text
-// program:    RDC3-master.do
-// task:       Demonstrate basic Stata Workflow
-// version:    First draft
-// project:    Texas Census Research Data Center Workshop on 
-//             project management
-// author:     Nathanael Rosenheim \ Jan 30 2015
+* Preinstall the following programs:
+* ssc install estout, replace // to create tables install estout
+* ssc install fastcd, replace // great for changing working directory quickly
+/*-------1---------2---------3---------4---------5---------6--------*/
+/* Start Log File: Change working directory to project directory    */
+/*-------1---------2---------3---------4---------5---------6--------*/
 
+capture log close   // suppress error and close any open logs
+log using work/TMPFWF-master-2017-02-10, replace text
+/********-*********-*********-*********-*********-*********-*********/
+/* Description of Program                                           */
+/********-*********-*********-*********-*********-*********-*********/
+// Do file name structure - where no spaces are included in file name:
+	// 3-5 letter project mnemonic [-task] step [letter] [Vversion] 
+	// [-description] yyyy-mm-dd.do
+// program:    TMPFWF-master-2017-02-10.do
+// task:       Demonstrate basic Stata Workflow
+// version:    Major Revision Second Draft
+// project:    Template Workflow
+// author:     Nathanael Rosenheim \ Feb 10, 2017
+
+/*------------------------------------------------------------------*/
+/* Control Stata                                                    */
+/*------------------------------------------------------------------*/
+* Generic do file that sets up stata environment
 clear all          // Clear existing data files
 macro drop _all    // Drop macros from memory
-version 10       // Set Version
+version 12.1       // Set Version
 set more off       // Tell Stata to not pause for --more-- messages
+set varabbrev off  // Turn off variable abbreviations
+set linesize 80    // Set Line Size - 80 Characters for Readability
+*set matsize 5000   // Set Matrix Size if program has a large matrix
+*set max_memory 2g  // if the file size is larger than 64M change size
 
+/*-------------------------------------------------------------------*/
+/* Set Provenance                                                    */
+/*-------------------------------------------------------------------*/
+// What is the do file name? What program is needed to replicate results?
+global dofilename "TMPFWF-master-2017-02-10" 
+global provenance "Provenance: ${dofilename}.do `c(filename)' `c(current_date)'"
+global source "Nathanael Rosenheim" // what is the data source
+global work workNPR // what is tha name of the Folder to save .do file output?
+
+/*-------------------------------------------------------------------*/
+/* Establish Project Directory Structure                             */
+/*-------------------------------------------------------------------*/
 // What it is the root directory on your computer?
 * NOTE * Use forward slash (/) - Recognized by all OS
 * NOTE * MacOSX and Windows require different directory structures
@@ -20,15 +52,9 @@ set more off       // Tell Stata to not pause for --more-- messages
 // Install utility to automate changing directories 'fastcd'
 // findit fastcd // to install
 
-
 * Stata can create folders if they do not exist
-capture mkdir RDC3             // Project directory
-cd RDC3
-capture mkdir Source           // Original, unchanged data sources
-capture mkdir Derived          // Constructed from the source data
-capture mkdir Clean            // Data to explore and interpret
-capture mkdir Tables_Figures   // Output Tables and Figures
-capture mkdir Text             // Text to share
+capture mkdir Work/${dofilename}     // Folder saves all outputs from do file
+global savefolder Work/${dofilename} 
 
 /********-*********-*********-*********-*********-*********-*********/
 /* Obtain Data - Populate Source Folder                             */
@@ -37,16 +63,16 @@ capture mkdir Text             // Text to share
 * Annual County Resident Population Estimates by 
 * Age, Sex, Race, and Hispanic Origin: April 1, 2010 to July 1, 2013
 copy "http://www.census.gov/popest/data/counties/asrh/2013/files/CC-EST2013-ALLDATA-48.csv" ///
-     "Source/POP_CC-EST2013-ALLDATA-48.csv", replace
+     "SourceData/POP_CC-EST2013-ALLDATA-48.csv", replace
 copy "http://www.census.gov/popest/data/counties/asrh/2013/files/CC-EST2013-ALLDATA.pdf" ///
-     "Source/POP_CC-EST2013-ALLDATA-48_Codebook.pdf", replace
+     "SourceData/POP_CC-EST2013-ALLDATA-48_Codebook.pdf", replace
 
 * Small Area Income and Poverty Estimates
 * Texas County Estimates for 2010
 copy "http://www.census.gov/did/www/saipe/downloads/estmod10/est10ALL.xls" ///
-     "source/SAIPE_est10ALL.xls", replace
+     "sourceData/SAIPE_est10ALL.xls", replace
 copy "http://www.census.gov/did/www/saipe/downloads/estmod10/README.txt" ///
-     "source/SAIPE_est10ALL_Codebook.txt", replace
+     "sourceData/SAIPE_est10ALL_Codebook.txt", replace
 
 /********-*********-*********-*********-*********-*********-*********/
 /* Scrub Data - Derive Stata Files from Sources                     */
@@ -59,14 +85,18 @@ copy "http://www.census.gov/did/www/saipe/downloads/estmod10/README.txt" ///
 
 * Create Population Estimates Stata file from CSV
 insheet using "Source/POP_CC-EST2013-ALLDATA-48.csv"
-save "derived/POP_CC-EST2013-ALLDATA-48.dta", replace 
+/* create a temporary file */
+tempfile POP_CC-EST2013-ALLDATA-48
+save "POP_CC-EST2013-ALLDATA-48"
 
 * Create SAIPE Stata file from Excel
 import excel "Source/SAIPE_est10ALL.xls", clear
-save "derived/SAIPE_est10ALL.dta", replace 
+/* create a temporary file */
+tempfile SAIPE_est10ALL
+save "SAIPE_est10ALL"
 
 * Drop and Add Variables Population File Files
-use "derived/POP_CC-EST2013-ALLDATA-48.dta", clear
+use "POP_CC-EST2013-ALLDATA-48", clear
 keep if year == 1   //  4/1/2010 Census population
 keep if agegrp == 0 //  Total age groups
 keep state county  tot_pop wa* ba* h_* // Keep white, black Hispanic totals
@@ -74,10 +104,12 @@ gen tot_wa = wa_male + wa_female // total white alone population
 gen tot_ba = ba_male + ba_female // total black alone population
 gen tot_h = h_male + h_female // total Hispanic alone population
 keep state county tot*        // drop sex variables
-save "derived/Pop_2010_TX", replace 
+/* create a temporary file */
+tempfile Pop_2010_TX
+save "Pop_2010_TX"
 
 * Clean SAIPE Excel Files
-use "derived/SAIPE_est10ALL.dta", clear
+use "SAIPE_est10ALL", clear
 drop E-G K-AE      // Do not need variables
 rename H PALL      // Poverty Percent All Ages
 label variable PALL "Poverty Percent All Ages"
@@ -85,34 +117,45 @@ label variable PALL "Poverty Percent All Ages"
 drop if _n <= 3    // Drop first 3 rows
 keep if A == "48"  // Keep Texas
 destring, replace  // Convert Strings to numeric
-save "derived/SAIPE_2010_TX", replace 
+/* create a temporary file */
+tempfile SAIPE_2010_TX
+save "SAIPE_2010_TX"
 
 * Add Merge ID - FIPS County Pop Data
-use "derived/Pop_2010_TX", clear 
+use "Pop_2010_TX", clear 
 // generated FIPS_Code from State and County Codes
 gen str5 FIPS_County = string(state,"%02.0f")+string(county,"%03.0f")
 sort FIPS_County
-save "derived/Pop_2010_TX_id", replace 
+/* create a temporary file */
+tempfile Pop_2010_TX_id
+save "Pop_2010_TX_id"
+
 * Add Merge ID - FIPS County SAIPE Data
-use "derived/SAIPE_2010_TX", clear 
+use "SAIPE_2010_TX", clear 
 // generated FIPS_Code from State and County Codes
 gen str5 FIPS_County = string(A,"%02.0f")+string(B,"%03.0f")
 sort FIPS_County
-save "derived/SAIPE_2010_TX_id", replace 
+/* create a temporary file */
+tempfile SAIPE_2010_TX_id
+save "SAIPE_2010_TX_id"
 
 * Merge SAIPE and SEER Data
-use "derived/Pop_2010_TX_id", clear 
-merge FIPS_County using "derived/SAIPE_2010_TX_id" 
-save "derived/SAIPE_POP_2010_TX", replace
+use "${savefolder}/Pop_2010_TX_id", clear 
+merge FIPS_County using "${savefolder}/SAIPE_2010_TX_id"
+/* create a temporary file */
+tempfile SAIPE_POP_2010_TX
+save "SAIPE_POP_2010_TX"
 
 * Drop uneeded variables and reorder
-use "derived/SAIPE_POP_2010_TX", clear
+use "${savefolder}/SAIPE_POP_2010_TX", clear
 drop state county A B _merge
 order FIPS_County D C
-save "derived/SAIPE_POP_2010_TX_fltr", replace
+/* create a temporary file */
+tempfile SAIPE_POP_2010_TX_fltr
+save "SAIPE_POP_2010_TX_fltr"
 
 * Add pop percent variables, label new variables
-use "derived/SAIPE_POP_2010_TX_fltr", clear
+use "SAIPE_POP_2010_TX_fltr", clear
 * EXAMPLE OF LOOP
 foreach re in wa ba h { // loop through white, black Hispanic
  gen p_`re' = tot_`re' / tot_pop * 100 
@@ -125,76 +168,93 @@ label variable p_h  "Percent Hispanic"
 /*------------------------------------------------------------------*/
 /* Clean Data - Final scrub - Save File to Clean Folder             */
 /*------------------------------------------------------------------*/
-save "clean/RDC3-SAIPE_POP_2010_TX", replace
+saveold "${savefolder}/${dofilename}", replace
 outsheet using ///
-     "clean/RDC3-SAIPE_POP_2010_TX.csv", comma replace // To use in R
+     "${savefolder}/${dofilename}.csv", comma replace // To use in R
 	 
 /********-*********-*********-*********-*********-*********-*********/
 /* Explore Data - Create Tables and Figures to Interpret            */
 /********-*********-*********-*********-*********-*********-*********/
 * ssc install estout, replace // to create tables install estout
 * Create Table with Descriptive Statistics
-use "clean/RDC3-SAIPE_POP_2010_TX", replace
+use "${savefolder}/${dofilename}", replace
 local dscrb_vars PALL p_*  // Variables to describe
 capture noisily eststo clear
 capture noisily estpost tabstat `dscrb_vars', ///
 		statistics(min max p50 mean sd count) columns(statistics)
 capture noisily esttab using ///
-`"tables_figures/RDC3-Tables.rtf"' ///
+`"${savefolder}/${dofilename}.rtf"' ///
 , alignment(r) replace label gaps modelwidth(6) nonumbers  ///
 cells("count(fmt(%4.0f)) min(fmt(%4.2f)) max(fmt(%4.2f)) p50(fmt(%4.2f)) mean(fmt(%4.2f)) sd(fmt(%4.2f))") noobs ///
 title(Basic Descriptive Statistics Poverty and Population Data for Texas Counties 2010) ///
-addnote("`c(filename)' `c(current_date)'")
+addnote("$provenance")
 eststo clear
 
 * Create Histogram of poverty
-use "clean/RDC3-SAIPE_POP_2010_TX", replace
+use "${savefolder}/${dofilename}", replace
 local graphcaption = "Histogram of Percent Poverty for Texas Counties 2010."
 histogram PALL, frequency normal kdensity ///
 	title(`graphcaption') ///
-	caption("`c(filename)' `c(current_date)'", size(tiny))
-graph export `"tables_figures/HistPall.pdf"', replace
+	caption("$provenance", size(tiny))
+graph export `"${savefolder}/${dofilename}_HistPALL.pdf"', replace
 notes: Poverty has a normal distribution
-save "clean/RDC3-SAIPE_POP_2010_TX", replace
+
+saveold "${savefolder}/${dofilename}", replace
 /********-*********-*********-*********-*********-*********-*********/
 /* Model Data                                                       */
 /********-*********-*********-*********-*********-*********-*********/
 * Output Regression Table
-use "clean/RDC3-SAIPE_POP_2010_TX", replace
+use "${savefolder}/${dofilename}", replace
 capture noisily eststo: regress PALL p_*
 
 capture noisily  esttab using ///
-	`"tables_figures/RDC3-Tables.rtf"' ///
+	`"${savefolder}/${dofilename}.rtf"' ///
 	, b(%4.3f) se(%4.3f) ar2 onecell append label modelwidth(6) nonumbers  /// 
 	title(Parameter Estimates from Models of Poverty with Race and Ethnicity) ///
 	alignment(c) parentheses ///
-	addnote("`c(filename)' `c(current_date)'")
+	addnote("$provenance")
 capture noisily eststo clear
 notes: Race and ethnicity predictors have significant coef.
 notes: Include median income? Will race still be significant?
-save "clean/RDC3-SAIPE_POP_2010_TX", replace
+saveold "${savefolder}/${dofilename}", replace
 /********-*********-*********-*********-*********-*********-*********/
 /* Interpret Data                                                   */
 /********-*********-*********-*********-*********-*********-*********/
 notes  // View notes
 // Example of how Stata stores regression results
 tempname handel1
-file open  `handel1' using "text/RDC3-Interpret.rtf", write replace
+file open  `handel1' using "${savefolder}/${dofilename}_Interpret.rtf", write replace
 file write `handel1' "For Texas in 2010, " 
 file write `handel1' "there is a significant association between " 
 file write `handel1' "poverty and race." _n
 file write `handel1' "The model had `e(N)' counties and " _n
 file write `handel1' "an adjusted r-sqaure of `e(r2_a)'. " _n
-file write `handel1' "See notes store in `c(filename)'"
+file write `handel1' "See notes store in ${Provenance}"
 file close `handel1' 
 
-/********-*********-*********-*********-*********-*********-*********/
-/* End Log                                                          */
-/********-*********-*********-*********-*********-*********-*********/
+/*-------------------------------------------------------------------*/
+/* Notes on Data Sources                                             */
+/*-------------------------------------------------------------------*/
 
-log close master 
-* Exit Program
+notes: $provenance
+
+/*-------------------------------------------------------------------*/
+/* Generate Codebook                                                 */
+/*-------------------------------------------------------------------*/
+codebook, compact
+notes
+
+* Best option is to use saveold - otherwise collaborators using 
+* an early version will not be able to open data files
+saveold "${savefolder}/${dofilename}.dta", replace
+
+/*-------------------------------------------------------------------*/
+/* End Log                                                           */
+/*-------------------------------------------------------------------*/
+
+log close
 exit
+
 
 * NOTE * Nothing below "exit" will run or be included in the log file
 
