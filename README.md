@@ -1,16 +1,16 @@
-# RDC3
+# Template Work Flow - TMPWF
 Programs that demonstrate OSEMN workflow
 
-// readme:     RDC3-master.do
+// readme:     TMPWF-master.do
 // task:       Demonstrate basic Stata Workflow
-// project:    Texas Census Research Data Center Workshop on 
-//             project management
-// author:     Nathanael Rosenheim \ Jan 30 2015
+// project:    Template Workflow
+// author:     Nathanael Rosenheim \ Feb 10 2017
 
-Before Running RDC3-master.do
+Before Running TMPWF-master.do
 
 1. Change the root directory to where you want to save the outputs.
-2. RDC3-master.do does the following
+- I suggest using the Stata program FASTCD to assit in keeping track of root directories
+2. TMPWF-master.do does the following
 - Creates Folders for program if missing
 - Copies 2 files from the internet
 - Creates Stata *.dat files
