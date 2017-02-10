@@ -2,8 +2,11 @@
 Programs that demonstrate OSEMN workflow
 
 // readme:     TMPWF-master.do
+
 // task:       Demonstrate basic Stata Workflow
+
 // project:    Template Workflow
+
 // author:     Nathanael Rosenheim \ Feb 10 2017
 
 Before Running TMPWF-master.do
